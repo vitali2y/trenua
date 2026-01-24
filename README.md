@@ -7,20 +7,32 @@
  \__| _|   \___| _|  _| \__,_| \__,_|
 ```
 
-This is simple English-Ukrainian, back and forth, translation CLI application (`tr-en-ua`) written in Rust with using
-[TranslateGemma](https://blog.google/innovation-and-ai/technology/developers-tools/translategemma/) model,
-with automatic language recognision feature, and downloading of default or specified model if not present yet.
+This is simple English-Ukrainian, bidirectional back and forth, translation CLI application (`tr-en-ua`) written in Rust with using
+[TranslateGemma](https://blog.google/innovation-and-ai/technology/developers-tools/translategemma/) open translation model built on `Gemma 3` by Google ([Gemma Terms of Use](https://ai.google.dev/gemma/terms)),
+with automatic language recognision feature, and automatic downloading of default or specified model (if not present yet).
 
-## Usage
+## Installation
 
-### Compilation
+Download the latest binary for Linux (for now) from [Releases](https://github.com/vitali2y/trenua/releases), or build from source as below.
+
+### Build from source
+
+#### Build Dependencies
+
+Ubuntu/Debian: for Vulkan GPU acceleration:
+```bash
+sudo apt install glslc libvulkan-dev
+```
 
 ```bash
+git clone --recursive https://github.com/vitali2y/trenua && cd trenua
 # default CPU usage
 cargo build --release
 # or next with GPU usage
 cargo build --release --features vulkan
 ```
+
+## Usage
 
 ### Example with text as an argument
 ```bash
@@ -58,3 +70,7 @@ Options:
   --help, help      display usage information
 ➜
 ```
+
+## License                                                                                                                                                                             
+
+MIT license ([LICENSE](https://github.com/vitali2y/simple-opirv2-router/blob/main/LICENSE) or <http://opensource.org/licenses/MIT>)

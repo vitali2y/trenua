@@ -1,0 +1,38 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust & Vulkan deps
+        run: |
+          sudo apt update
+          sudo apt install -y glslc libvulkan-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: cargo build --release --features vulkan
+      - name: Strip binary
+        run: strip target/release/trenua
+      - name: Upload
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/release/trenua
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*/*
