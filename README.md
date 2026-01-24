@@ -24,8 +24,7 @@ cargo build --release --features vulkan
 
 ### Example with text as an argument
 ```bash
-cargo build --release --features vulkan && \
-  ./target/release/trenua "Слава Україні" \
+./target/release/trenua "Слава Україні" \
   --hf-repo mradermacher/translategemma-12b-it-i1-GGUF \
   --hf-model translategemma-12b-it.i1-Q4_K_M.gguf --gpu-layers -1
 ```
