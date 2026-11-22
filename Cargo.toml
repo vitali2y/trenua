@@ -1,6 +1,6 @@
 [package]
 name = "trenua"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 description = "English <-> Ukrainian translation CLI app using TranslateGemma model"
 
@@ -13,9 +13,14 @@ cuda = ["llama-cpp-2/cuda"]
 llama-cpp-2 = { version = "0.1", default-features = false }
 argh = "0.1"
 anyhow = "1.0"
-dirs = "5.0"
+dirs = "6.0"
 encoding_rs = "0.8"
 glob = "0.3"
-num_cpus = "1.16"
-hf-hub = "0.3"
+num_cpus = "1.17"
+hf-hub = "0.5"
 tracing-subscriber = "0.3"
+
+# for examples only
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.13", features = ["blocking", "json"] }
+serde = { version = "1.0", features = ["derive"] }

@@ -1,0 +1,18 @@
+[package]
+name = "translate-en-ua"
+version = "0.1.0"
+edition = "2024"
+description = "English <-> Ukrainian translation CLI app using TranslateGemma model"
+
+build = "build.rs"
+
+[dependencies]
+llama-cpp-2 = { path = "./llama-cpp-rs/llama-cpp-2", version = "0.1" }
+argh = "0.1"
+anyhow = "1.0"
+dirs = "5.0"
+encoding_rs = "0.8"
+glob = "0.3"
+num_cpus = "1.16"
+hf-hub = "0.3"
+tracing-subscriber = "0.3"

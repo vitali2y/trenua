@@ -33,8 +33,8 @@ struct Args {
     #[argh(option, default = "0")]
     gpu_layers: i32,
 
-    /// context size in tokens (default: 8192)
-    #[argh(option, default = "8192")]
+    /// context size in tokens (default: 16384)
+    #[argh(option, default = "16384")]
     ctx_size: u32,
 
     /// enable debug logs
@@ -61,7 +61,7 @@ fn main() {
     }
 
     if let Err(e) = run(args) {
-        eprintln!("Error: {:#}", e);
+        eprintln!("error: {:#}", e);
         std::process::exit(1);
     }
 }
@@ -75,7 +75,7 @@ fn run(args: Args) -> Result<()> {
             let mut buffer = String::new();
             io::stdin()
                 .read_to_string(&mut buffer)
-                .context("Failed to read from stdin")?;
+                .context("failed to read from stdin")?;
             buffer
         }
     };
@@ -103,23 +103,23 @@ fn run(args: Args) -> Result<()> {
     };
     let model_params = LlamaModelParams::default().with_n_gpu_layers(n_gpu_layers as u32);
     let model = LlamaModel::load_from_file(&backend, model_path, &model_params)
-        .context("Failed to load model")?;
+        .context("failed to load model")?;
 
     // tokenize
     let tokens = model
         .str_to_token(&prompt, AddBos::Always)
-        .context("Tokenization failed")?;
+        .context("tokenization failed")?;
 
     // context
     if args.ctx_size < 2048 {
-        return Err(anyhow::anyhow!("Context size must be at least 2048"));
+        return Err(anyhow::anyhow!("context size must be at least 2048"));
     }
     let ctx_params = LlamaContextParams::default()
         .with_n_threads(num_cpus::get() as i32)
         .with_n_ctx(Some(std::num::NonZeroU32::new(args.ctx_size).unwrap()));
     let mut ctx = model
         .new_context(&backend, ctx_params)
-        .context("Failed to create context")?;
+        .context("failed to create context")?;
 
     // decode prompt
     let mut batch = llama_cpp_2::llama_batch::LlamaBatch::new(512, 1);
@@ -127,17 +127,22 @@ fn run(args: Args) -> Result<()> {
         let is_last = i == tokens.len() - 1;
         batch.add(token, i as i32, &[0], is_last)?;
     }
-    ctx.decode(&mut batch).context("Prompt decode failed")?;
+    ctx.decode(&mut batch).context("prompt decode failed")?;
 
     // sampling
     let mut sampler = llama_cpp_2::sampling::LlamaSampler::chain_simple([
         llama_cpp_2::sampling::LlamaSampler::dist(1234),
+        llama_cpp_2::sampling::LlamaSampler::top_p(0.95, 1),
         llama_cpp_2::sampling::LlamaSampler::greedy(),
     ]);
+    // let mut sampler = llama_cpp_2::sampling::LlamaSampler::chain_simple([
+    //     llama_cpp_2::sampling::LlamaSampler::dist(1234),
+    //     llama_cpp_2::sampling::LlamaSampler::greedy(),
+    // ]);
 
     let mut output = String::new();
     let mut decoder = encoding_rs::UTF_8.new_decoder();
-    let max_tokens = 256;
+    let max_tokens = 8192;
     let mut n_cur = tokens.len() as i32;
 
     while n_cur < max_tokens {
@@ -152,9 +157,13 @@ fn run(args: Args) -> Result<()> {
         let mut s = String::with_capacity(16);
         let _ = decoder.decode_to_string(&bytes, &mut s, false);
 
-        if s.contains('\n') {
-            break; // stop at first newline
+        println!("s: {s}");
+        if s.contains("EOF") {
+            break; // stop when we have a complete sentence in Ukrainian
         }
+        // if s.contains('\n') {
+        //     break; // stop at first newline
+        // }
 
         output.push_str(&s);
         n_cur += 1;
@@ -163,6 +172,26 @@ fn run(args: Args) -> Result<()> {
         batch.add(token, n_cur - 1, &[0], true)?;
         ctx.decode(&mut batch).context("Decode failed")?;
     }
+    // while n_cur < max_tokens {
+    //     let token = sampler.sample(&ctx, batch.n_tokens() - 1);
+    //     sampler.accept(token);
+
+    //     if model.is_eog_token(token) {
+    //         break;
+    //     }
+
+    //     let bytes = model.token_to_bytes(token, Special::Tokenize)?;
+    //     let mut s = String::with_capacity(16);
+    //     let _ = decoder.decode_to_string(&bytes, &mut s, false);
+
+    //     // Remove the newline check that was causing early termination
+    //     output.push_str(&s);
+    //     n_cur += 1;
+
+    //     batch.clear();
+    //     batch.add(token, n_cur - 1, &[0], true)?;
+    //     ctx.decode(&mut batch).context("Decode failed")?;
+    // }
 
     println!("{}", output.trim());
     Ok(())
@@ -187,7 +216,7 @@ fn resolve_model_path(
         (Some(path), None, None) => {
             let p = PathBuf::from(path);
             if !p.exists() {
-                return Err(anyhow::anyhow!("Model file not found: {}", p.display()));
+                return Err(anyhow::anyhow!("model file not found: {}", p.display()));
             }
             Ok(p)
         }
@@ -195,43 +224,43 @@ fn resolve_model_path(
             // check cache first
             if let Some(cached) = find_cached_hf_model(&repo, &filename)? {
                 if debug {
-                    eprintln!("Using cached model: {}", cached.display());
+                    eprintln!("using cached model: {}", cached.display());
                 }
                 return Ok(cached);
             }
 
             // download silently unless debug
             if debug {
-                eprintln!("Downloading {}/{}...", repo, filename);
+                eprintln!("downloading {}/{}...", repo, filename);
             }
             let api = ApiBuilder::new()
                 .with_progress(debug)
                 .build()
-                .context("Failed to init Hugging Face API")?;
+                .context("failed to init Hugging Face API")?;
             Ok(api.model(repo).get(&filename)?)
         }
         (None, None, None) => {
             // auto mode
             if let Some(p) = try_find_cached_model()? {
                 if debug {
-                    eprintln!("Using auto-detected model: {}", p.display());
+                    eprintln!("using auto-detected model: {}", p.display());
                 }
                 Ok(p)
             } else {
                 if debug {
-                    eprintln!("Downloading default model...");
+                    eprintln!("downloading default model...");
                 }
                 let api = ApiBuilder::new()
                     .with_progress(debug)
                     .build()
-                    .context("Failed to init Hugging Face API")?;
+                    .context("failed to init Hugging Face API")?;
                 Ok(api
                     .model("mradermacher/translategemma-12b-it-i1-GGUF".to_string())
                     .get("translategemma-12b-it.i1-Q4_K_M.gguf")?)
             }
         }
         _ => Err(anyhow::anyhow!(
-            "Specify either --model <path> OR both --hf-repo and --hf-model"
+            "specify either `--model <path>` or both `--hf-repo` and `--hf-model`"
         )),
     }
 }
